@@ -191,10 +191,11 @@ void _Execute( const FEMTree< Dim , Real >* tree , XForm< Real , Dim+1 > modelTo
 		else if( !strcasecmp( ext , "ply"  ) ) pointStream = new    PLYInputPointStream< Real , Dim >( Samples.value );
 		else                                   pointStream = new  ASCIIInputPointStream< Real , Dim >( Samples.value );
 		delete[] ext;
-		typename FEMTree< Dim , Real >::template MultiThreadedEvaluator< IsotropicUIntPack< Dim , FEMSig > , 0 > evaluator( tree , coefficients );
+		typename FEMTree< Dim , Real >::template MultiThreadedEvaluator< IsotropicUIntPack< Dim , FEMSig > , 1 > evaluator( tree , coefficients );
 		static const unsigned int CHUNK_SIZE = 1024;
 		Point< Real , Dim > points[ CHUNK_SIZE ];
-		Real values[ CHUNK_SIZE ];
+		CumulativeDerivativeValues< Real , Dim , 1 > values [CHUNK_SIZE];
+		// Real values[ CHUNK_SIZE ];
 		size_t pointsRead;
 		while( ( pointsRead=pointStream->nextPoints( points , CHUNK_SIZE ) ) )
 		{
@@ -203,11 +204,12 @@ void _Execute( const FEMTree< Dim , Real >* tree , XForm< Real , Dim+1 > modelTo
 				Point< Real , Dim > p = modelToUnitCube * points[j];
 				bool inBounds = true;
 				for( int d=0 ; d<Dim ; d++ ) if( p[d]<0 || p[d]>1 ) inBounds = false;
-				if( inBounds ) values[j] = evaluator.values( modelToUnitCube * points[j] , thread )[0];
-				else           values[j] = (Real)nan( "" );
+				values[j] = evaluator.values( modelToUnitCube * points[j] , thread );
+				// if( inBounds ) values[j] = evaluator.values( modelToUnitCube * points[j] , thread )[1];
+				// else           values[j] = (Real)nan( "" );
 			}
 			);
-			for( int j=0 ; j<pointsRead ; j++ ) printf( "%g %g %g\n" , points[j][0] , points[j][1] , values[j] );
+			for( int j=0 ; j<pointsRead ; j++ ) printf( "%12.12f %12.12f %12.12f %12.12f %12.12f %12.12f %12.12f\n" , points[j][0] , points[j][1] ,points[j][2] , values[j][0], values[j][1], values[j][2], values[j][3]);
 		}
 
 		delete pointStream;
